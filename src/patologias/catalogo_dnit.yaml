@@ -1,0 +1,123 @@
+fonte: "DNIT 005/2003-TER, Anexo A (normativo), Quadro resumo dos defeitos"
+patologias:
+  - id: fenda
+    nome: "Fendas"
+    filhos:
+      - id: fissura
+        nome: "Fissuras"
+        codigo: "FI"
+      - id: trinca_fadiga
+        nome: "Trincas no revestimento geradas por deformação permanente excessiva e/ou decorrentes do fenômeno de fadiga"
+        filhos:
+          - id: trinca_fadiga_isolada
+            nome: "Trincas Isoladas"
+            filhos:
+              - id: trinca_transversal
+                nome: "Transversais"
+                nome_exibicao: "Trinca transversal"
+                filhos:
+                  - id: trinca_transversal_curta
+                    nome: "Curtas"
+                    codigo: "TTC"
+                  - id: trinca_transversal_longa
+                    nome: "Longas"
+                    codigo: "TTL"
+              - id: trinca_longitudinal
+                nome: "Longitudinais"
+                nome_exibicao: "Trinca longitudinal"
+                filhos:
+                  - id: trinca_longitudinal_curta
+                    nome: "Curtas"
+                    codigo: "TLC"
+                  - id: trinca_longitudinal_longa
+                    nome: "Longas"
+                    codigo: "TLL"
+          - id: trinca_fadiga_interligada
+            nome: "Trincas Interligadas"
+            filhos:
+              - id: trinca_jacare
+                nome: "“Jacaré”"
+                nome_exibicao: "Trinca jacaré"
+                filhos:
+                  - id: trinca_jacare_sem_erosao
+                    nome: "Sem erosão acentuada nas bordas das trincas"
+                    codigo: "J"
+                  - id: trinca_jacare_com_erosao
+                    nome: "Com erosão acentuada nas bordas das trincas"
+                    codigo: "JE"
+      - id: trinca_nao_fadiga
+        nome: "Trincas no revestimento não atribuídas ao fenômeno de fadiga"
+        filhos:
+          - id: trinca_nao_fadiga_isolada
+            nome: "Trincas Isoladas"
+            filhos:
+              - id: trinca_retracao
+                nome: "Devido à retração térmica ou dissecação da base (solo-cimento) ou do revestimento"
+                codigo: "TRR"
+          - id: trinca_nao_fadiga_interligada
+            nome: "Trincas Interligadas"
+            filhos:
+              - id: trinca_bloco
+                nome: "“Bloco”"
+                filhos:
+                  - id: trinca_bloco_sem_erosao
+                    nome: "Sem erosão acentuada nas bordas das trincas"
+                    codigo: "TB"
+                  - id: trinca_bloco_com_erosao
+                    nome: "Com erosão acentuada nas bordas das trincas"
+                    codigo: "TBE"
+
+  - id: outros_defeitos
+    nome: "Outros defeitos"
+    filhos:
+      - id: afundamento
+        nome: "Afundamento"
+        filhos:
+          - id: afundamento_plastico
+            nome: "Plástico"
+            filhos:
+              - id: afundamento_plastico_local
+                nome: "Local"
+                descricao: "Devido à fluência plástica de uma ou mais camadas do pavimento ou do subleito"
+                codigo: "ALP"
+              - id: afundamento_plastico_trilha
+                nome: "da Trilha"
+                descricao: "Devido à fluência plástica de uma ou mais camadas do pavimento ou do subleito"
+                codigo: "ATP"
+          - id: afundamento_consolidacao
+            nome: "De Consolidação"
+            filhos:
+              - id: afundamento_consolidacao_local
+                nome: "Local"
+                descricao: "Devido à consolidação diferencial ocorrente em camadas do pavimento ou do subleito"
+                codigo: "ALC"
+              - id: afundamento_consolidacao_trilha
+                nome: "da Trilha"
+                descricao: "Devido à consolidação diferencial ocorrente em camadas do pavimento ou do subleito"
+                codigo: "ATC"
+      - id: ondulacao
+        nome: "Ondulação/Corrugação"
+        descricao: "Ondulações transversais causadas por instabilidade da mistura betuminosa constituinte do revestimento ou da base"
+        codigo: "O"
+      - id: escorregamento
+        nome: "Escorregamento (do revestimento betuminoso)"
+        codigo: "E"
+      - id: exsudacao
+        nome: "Exsudação do ligante betuminoso no revestimento"
+        codigo: "EX"
+      - id: desgaste
+        nome: "Desgaste acentuado na superfície do revestimento"
+        codigo: "D"
+      - id: panela
+        nome: "“Panelas” ou buracos decorrentes da desagregação do revestimento e às vezes de camadas inferiores"
+        nome_exibicao: "Panela"
+        codigo: "P"
+      - id: remendo
+        nome: "Remendos"
+        filhos:
+          - id: remendo_superficial
+            nome: "Remendo Superficial"
+            codigo: "RS"
+          - id: remendo_profundo
+            nome: "Remendo Profundo"
+            codigo: "RP"
