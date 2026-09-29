@@ -1,6 +1,7 @@
 """Acesso a dados da plataforma, o contrato e a escolha de quem o implementa."""
 
 from database import sqlite as implementacao    # ponto que define a implementação
+from patologias import catalogo
 
 DESTINO_PADRAO = implementacao.CAMINHO_PADRAO
 
@@ -23,7 +24,20 @@ def modelos(caminho):
     return implementacao.modelos(caminho)
 
 
-def cadastrar_modelo(caminho, nome, caminho_pesos, sha256):
+def cadastrar_modelo(caminho, arvore_dnit, nome, caminho_pesos, sha256, correspondencia):
     """Grava o modelo e devolve o id."""
     nome = _nome(nome, "modelo")
-    return implementacao.cadastrar_modelo(caminho, nome, caminho_pesos, sha256)
+    if not correspondencia:
+        raise ValueError("O modelo não tem classes.")
+    fora = []
+    for identificador_dnit in correspondencia.values():
+        if identificador_dnit is not None and not catalogo.existe(arvore_dnit, identificador_dnit):
+            fora.append(identificador_dnit)
+    if fora:
+        raise ValueError(f"Nó inexistente no catálogo da norma: {', '.join(fora)}.")
+    return implementacao.cadastrar_modelo(caminho, nome, caminho_pesos, sha256, correspondencia)
+
+
+def classes(caminho, modelo_id):
+    """Classes dos pesos do modelo, nome -> nó do catálogo, ou None se ignorada."""
+    return implementacao.classes(caminho, modelo_id)

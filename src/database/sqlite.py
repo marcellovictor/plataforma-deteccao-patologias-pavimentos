@@ -13,6 +13,13 @@ CREATE TABLE IF NOT EXISTS modelo (
     caminho_pesos TEXT    NOT NULL,
     sha256        TEXT    NOT NULL
 ) STRICT;
+
+CREATE TABLE IF NOT EXISTS classe (
+    modelo_id      INTEGER NOT NULL REFERENCES modelo (id) ON DELETE CASCADE,
+    nome           TEXT    NOT NULL,
+    patologia_dnit TEXT,
+    PRIMARY KEY (modelo_id, nome)
+) STRICT;
 """
 
 
@@ -21,6 +28,7 @@ def _conexao(caminho):
     """Uma conexão por operação, numa transação, fechada no fim."""
     con = sqlite3.connect(caminho)
     con.row_factory = sqlite3.Row
+    con.execute("PRAGMA foreign_keys = ON")
     try:
         with con:
             yield con
@@ -47,12 +55,29 @@ def modelos(caminho):
         return encontrados
 
 
-def cadastrar_modelo(caminho, nome, caminho_pesos, sha256):
+def cadastrar_modelo(caminho, nome, caminho_pesos, sha256, correspondencia):
     """Grava o modelo e devolve o id."""
     try:
         with _conexao(caminho) as con:
-            return con.execute(
+            modelo_id = con.execute(
                 "INSERT INTO modelo (nome, caminho_pesos, sha256) VALUES (?, ?, ?)",
                 (nome, str(caminho_pesos), sha256)).lastrowid
+            for classe, identificador_dnit in correspondencia.items():
+                con.execute(
+                    "INSERT INTO classe (modelo_id, nome, patologia_dnit) VALUES (?, ?, ?)",
+                    (modelo_id, classe, identificador_dnit))
     except sqlite3.IntegrityError as e:
         raise ValueError(f"Já existe um modelo com o nome {nome}.") from e
+    return modelo_id
+
+
+def classes(caminho, modelo_id):
+    """Classes dos pesos do modelo, nome -> nó do catálogo, ou None se ignorada."""
+    with _conexao(caminho) as con:
+        linhas = con.execute(
+            "SELECT nome, patologia_dnit FROM classe WHERE modelo_id = ? ORDER BY rowid",
+            (modelo_id,))
+        encontradas = {}
+        for linha in linhas:
+            encontradas[linha["nome"]] = linha["patologia_dnit"]
+        return encontradas
