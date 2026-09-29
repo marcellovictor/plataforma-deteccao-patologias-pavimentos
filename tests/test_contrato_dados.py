@@ -81,3 +81,40 @@ def test_no_fora_do_catalogo_recusado(tmp_path, arvore):
     caminho = contrato_dados.abrir(tmp_path / "teste.db")
     with pytest.raises(ValueError):
         contrato_dados.cadastrar_modelo(caminho, arvore, "Errado", "/x.pt", "a" * 64, {"X": "nao_existe"})
+
+
+def test_detector_criado_aparece_na_lista(tmp_path, arvore):
+    caminho = contrato_dados.abrir(tmp_path / "teste.db")
+    modelo_id = contrato_dados.cadastrar_modelo(caminho, arvore, "Base", "/base.pt", "a" * 64, CORRESPONDENCIA)
+    contrato_dados.criar_detector(caminho, "Cenário base", modelo_id, 640, 0.25, 300)
+    guardados = contrato_dados.detectores(caminho)
+    assert len(guardados) == 1
+    assert guardados[0]["nome"] == "Cenário base"
+
+
+def test_detector_traz_o_nome_do_modelo(tmp_path, arvore):
+    caminho = contrato_dados.abrir(tmp_path / "teste.db")
+    modelo_id = contrato_dados.cadastrar_modelo(caminho, arvore, "Base", "/base.pt", "a" * 64, CORRESPONDENCIA)
+    contrato_dados.criar_detector(caminho, "Cenário base", modelo_id, 640, 0.25, 300)
+    assert contrato_dados.detectores(caminho)[0]["modelo_nome"] == "Base"
+
+
+def test_limiar_fora_da_faixa_recusado(tmp_path, arvore):
+    caminho = contrato_dados.abrir(tmp_path / "teste.db")
+    modelo_id = contrato_dados.cadastrar_modelo(caminho, arvore, "Base", "/base.pt", "a" * 64, CORRESPONDENCIA)
+    with pytest.raises(ValueError):
+        contrato_dados.criar_detector(caminho, "X", modelo_id, 640, 1.5, 300)
+
+
+def test_limiar_booleano_recusado(tmp_path, arvore):
+    caminho = contrato_dados.abrir(tmp_path / "teste.db")
+    modelo_id = contrato_dados.cadastrar_modelo(caminho, arvore, "Base", "/base.pt", "a" * 64, CORRESPONDENCIA)
+    with pytest.raises(ValueError):
+        contrato_dados.criar_detector(caminho, "X", modelo_id, 640, True, 300)
+
+
+def test_resolucao_fracionaria_recusada(tmp_path, arvore):
+    caminho = contrato_dados.abrir(tmp_path / "teste.db")
+    modelo_id = contrato_dados.cadastrar_modelo(caminho, arvore, "Base", "/base.pt", "a" * 64, CORRESPONDENCIA)
+    with pytest.raises(ValueError):
+        contrato_dados.criar_detector(caminho, "X", modelo_id, 640.0, 0.25, 300)

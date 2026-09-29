@@ -20,6 +20,15 @@ CREATE TABLE IF NOT EXISTS classe (
     patologia_dnit TEXT,
     PRIMARY KEY (modelo_id, nome)
 ) STRICT;
+
+CREATE TABLE IF NOT EXISTS detector (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome              TEXT    NOT NULL UNIQUE,
+    modelo_id         INTEGER NOT NULL REFERENCES modelo (id) ON DELETE RESTRICT,
+    resolucao_entrada INTEGER NOT NULL,
+    limiar_confianca  REAL    NOT NULL,
+    max_deteccoes     INTEGER NOT NULL
+) STRICT;
 """
 
 
@@ -81,3 +90,26 @@ def classes(caminho, modelo_id):
         for linha in linhas:
             encontradas[linha["nome"]] = linha["patologia_dnit"]
         return encontradas
+
+
+def detectores(caminho):
+    """Retorna os detectores, em ordem de id."""
+    with _conexao(caminho) as con:
+        linhas = con.execute(
+            "SELECT d.id, d.nome, d.modelo_id, m.nome AS modelo_nome, d.resolucao_entrada, d.limiar_confianca, d.max_deteccoes "
+            "FROM detector d JOIN modelo m ON m.id = d.modelo_id ORDER BY d.id")
+        encontrados = []
+        for linha in linhas:
+            encontrados.append(dict(linha))
+        return encontrados
+
+
+def criar_detector(caminho, nome, modelo_id, resolucao_entrada, limiar_confianca, max_deteccoes):
+    """Grava um detector e devolve o id."""
+    try:
+        with _conexao(caminho) as con:
+            return con.execute(
+                "INSERT INTO detector (nome, modelo_id, resolucao_entrada, limiar_confianca, max_deteccoes) VALUES (?, ?, ?, ?, ?)",
+                (nome, modelo_id, resolucao_entrada, float(limiar_confianca), max_deteccoes)).lastrowid
+    except sqlite3.IntegrityError as e:
+        raise ValueError(f"Não foi possível criar o detector {nome}.") from e
