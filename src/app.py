@@ -1,4 +1,6 @@
 import gradio as gr
+from patologias import catalogo
+from telas import informacoes
 
 TITULO = "Plataforma para detecção e classificação de patologias em pavimentos asfálticos"
 
@@ -20,6 +22,7 @@ def analisar_mock(imagem, detector):
 
 def montar():
     """Monta a página da plataforma e a devolve, sem subir servidor."""
+    arvore_dnit = catalogo.carregar()
     with gr.Blocks(title=TITULO) as pagina:
         gr.Markdown(f"# {TITULO}")
         with gr.Tabs():
@@ -38,7 +41,7 @@ def montar():
                 analisar.click(analisar_mock, inputs=[entrada, detector],
                                outputs=[saida, tabela])
             with gr.Tab("Informações"):
-                gr.Markdown("Patologias da norma DNIT 005/2003-TER que a plataforma reconhece.")
+                informacoes.montar(arvore_dnit)
             with gr.Tab("Configurações"):
                 gr.Markdown("Modelos cadastrados e detectores.")
     return pagina
