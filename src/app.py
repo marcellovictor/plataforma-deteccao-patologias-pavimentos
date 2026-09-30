@@ -1,6 +1,7 @@
 import gradio as gr
 from patologias import catalogo
 from telas import informacoes
+from visual import desenho
 
 TITULO = "Plataforma para detecção e classificação de patologias em pavimentos asfálticos"
 
@@ -9,20 +10,28 @@ TITULO = "Plataforma para detecção e classificação de patologias em paviment
 DETECTORES_MOCK = ["cenario base", "vencedor do ORDDC 2024"]
 
 
-# TODO depois ajustar dado mockado
-def analisar_mock(imagem, detector):
-    if imagem is None:
-        raise gr.Error("Envie uma imagem antes de analisar.")
-    deteccoes = [
-        ["Trinca longitudinal", "99%"],
-        ["Trinca jacaré", "67%"],
-        ["Panela", "42%"],
-    ]
-    return imagem, deteccoes
-
 def montar():
     """Monta a página da plataforma e a devolve, sem subir servidor."""
     arvore_dnit = catalogo.carregar()
+    cores = desenho.tabela_de_cores(arvore_dnit)
+
+    # TODO depois ajustar dado mockado
+    def analisar_mock(imagem, detector):
+        if imagem is None:
+            raise gr.Error("Envie uma imagem antes de analisar.")
+        deteccoes = [
+            dict(xyxy=(80, 60, 420, 300), identificador_dnit="trinca_longitudinal",
+                 classe="Trinca longitudinal", confianca=0.99),
+            dict(xyxy=(300, 380, 700, 620), identificador_dnit="trinca_jacare",
+                 classe="Trinca jacaré", confianca=0.67),
+            dict(xyxy=(120, 500, 260, 640), identificador_dnit="panela",
+                 classe="Panela", confianca=0.42),
+        ]
+        linhas = []
+        for deteccao in deteccoes:
+            linhas.append([deteccao["classe"], desenho.porcentagem(deteccao["confianca"])])
+        return desenho.desenhar(imagem, deteccoes, cores), linhas
+
     with gr.Blocks(title=TITULO) as pagina:
         gr.Markdown(f"# {TITULO}")
         with gr.Tabs():
