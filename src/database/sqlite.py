@@ -8,10 +8,10 @@ CAMINHO_PADRAO = Path(__file__).parents[2] / "plataforma.db"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS modelo (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    nome          TEXT    NOT NULL UNIQUE,
-    caminho_pesos TEXT    NOT NULL,
-    sha256        TEXT    NOT NULL
+    id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome                      TEXT    NOT NULL UNIQUE,
+    caminho_arquivo_de_modelo TEXT    NOT NULL,
+    sha256                    TEXT    NOT NULL
 ) STRICT;
 
 CREATE TABLE IF NOT EXISTS classe (
@@ -57,20 +57,20 @@ def modelos(caminho):
     """Retorna todos os modelos, em ordem de id."""
     with _conexao(caminho) as con:
         linhas = con.execute(
-            "SELECT id, nome, caminho_pesos, sha256 FROM modelo ORDER BY id")
+            "SELECT id, nome, caminho_arquivo_de_modelo, sha256 FROM modelo ORDER BY id")
         encontrados = []
         for linha in linhas:
             encontrados.append(dict(linha))
         return encontrados
 
 
-def cadastrar_modelo(caminho, nome, caminho_pesos, sha256, correspondencia):
+def cadastrar_modelo(caminho, nome, caminho_arquivo_de_modelo, sha256, correspondencia):
     """Grava o modelo e devolve o id."""
     try:
         with _conexao(caminho) as con:
             modelo_id = con.execute(
-                "INSERT INTO modelo (nome, caminho_pesos, sha256) VALUES (?, ?, ?)",
-                (nome, str(caminho_pesos), sha256)).lastrowid
+                "INSERT INTO modelo (nome, caminho_arquivo_de_modelo, sha256) VALUES (?, ?, ?)",
+                (nome, str(caminho_arquivo_de_modelo), sha256)).lastrowid
             for classe, identificador_dnit in correspondencia.items():
                 con.execute(
                     "INSERT INTO classe (modelo_id, nome, patologia_dnit) VALUES (?, ?, ?)",
@@ -81,7 +81,7 @@ def cadastrar_modelo(caminho, nome, caminho_pesos, sha256, correspondencia):
 
 
 def classes(caminho, modelo_id):
-    """Classes dos pesos do modelo, nome -> nó do catálogo, ou None se ignorada."""
+    """Classes do modelo, nome -> nó do catálogo, ou None se ignorada."""
     with _conexao(caminho) as con:
         linhas = con.execute(
             "SELECT nome, patologia_dnit FROM classe WHERE modelo_id = ? ORDER BY rowid",

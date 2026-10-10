@@ -33,7 +33,7 @@ def modelos(caminho):
     return implementacao.modelos(caminho)
 
 
-def cadastrar_modelo(caminho, arvore_dnit, nome, caminho_pesos, sha256, correspondencia):
+def cadastrar_modelo(caminho, arvore_dnit, nome, caminho_arquivo_de_modelo, sha256, correspondencia):
     """Grava o modelo e devolve o id."""
     nome = _nome(nome, "modelo")
     if not correspondencia:
@@ -44,11 +44,11 @@ def cadastrar_modelo(caminho, arvore_dnit, nome, caminho_pesos, sha256, correspo
             fora.append(identificador_dnit)
     if fora:
         raise ValueError(f"Nó inexistente no catálogo da norma: {', '.join(fora)}.")
-    return implementacao.cadastrar_modelo(caminho, nome, caminho_pesos, sha256, correspondencia)
+    return implementacao.cadastrar_modelo(caminho, nome, caminho_arquivo_de_modelo, sha256, correspondencia)
 
 
 def classes(caminho, modelo_id):
-    """Classes dos pesos do modelo, nome -> nó do catálogo, ou None se ignorada."""
+    """Classes do modelo, nome -> nó do catálogo, ou None se ignorada."""
     return implementacao.classes(caminho, modelo_id)
 
 
