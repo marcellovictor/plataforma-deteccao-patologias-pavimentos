@@ -1,5 +1,6 @@
 .venv/
 __pycache__/
 .pytest_cache/
-plataforma.db
-arquivos_de_modelos/
+*.db
+*.pt
+*:Zone.Identifier

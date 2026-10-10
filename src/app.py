@@ -1,59 +1,51 @@
+import argparse
+from pathlib import Path
 import gradio as gr
-from patologias import catalogo
-from telas import informacoes
+from database import contrato_dados
+from patologias import catalogo, modelos
+from telas import analise, informacoes
 from visual import desenho
 
 TITULO = "Plataforma para detecção e classificação de patologias em pavimentos asfálticos"
+RAIZ = Path(__file__).parents[1]
+CAMINHO_DATABASE = RAIZ / "plataforma.db"
+PASTA_ARQUIVOS_DE_MODELOS = RAIZ / "arquivos_de_modelos"
 
 
-# TODO depois ajustar dado mockado
-DETECTORES_MOCK = ["cenario base", "vencedor do ORDDC 2024"]
+def ler_argumentos():
+    """Lê da linha de comando onde ficam o database e a pasta dos arquivos de modelos."""
+    leitor = argparse.ArgumentParser(description=TITULO)
+    leitor.add_argument("--database", type=Path, default=CAMINHO_DATABASE,
+                        help="arquivo do database, padrão plataforma.db na raiz do repositório")
+    leitor.add_argument("--arquivos-de-modelos", type=Path, default=PASTA_ARQUIVOS_DE_MODELOS,
+                        help="pasta dos arquivos de modelos, padrão arquivos_de_modelos/ "
+                             "na raiz do repositório")
+    return leitor.parse_args()
 
 
-def montar():
+def montar(caminho_database, pasta_arquivos_de_modelos):
     """Monta a página da plataforma e a devolve, sem subir servidor."""
     arvore_dnit = catalogo.carregar()
     cores = desenho.tabela_de_cores(arvore_dnit)
-
-    # TODO depois ajustar dado mockado
-    def analisar_mock(imagem, detector):
-        if imagem is None:
-            raise gr.Error("Envie uma imagem antes de analisar.")
-        deteccoes = [
-            dict(xyxy=(80, 60, 420, 300), identificador_dnit="trinca_longitudinal",
-                 classe="Trinca longitudinal", confianca=0.99),
-            dict(xyxy=(300, 380, 700, 620), identificador_dnit="trinca_jacare",
-                 classe="Trinca jacaré", confianca=0.67),
-            dict(xyxy=(120, 500, 260, 640), identificador_dnit="panela",
-                 classe="Panela", confianca=0.42),
-        ]
-        linhas = []
-        for deteccao in deteccoes:
-            linhas.append([deteccao["classe"], desenho.porcentagem(deteccao["confianca"])])
-        return desenho.desenhar(imagem, deteccoes, cores), linhas
+    caminho_database = contrato_dados.abrir(caminho_database)
+    modelos_carregados, problemas_de_carga = modelos.carregar_modelos_cadastrados(
+        caminho_database, pasta_arquivos_de_modelos, arvore_dnit)
+    for modelo_id, problema in problemas_de_carga.items():
+        print(f"O modelo de id {modelo_id} não carregou. {problema}")
 
     with gr.Blocks(title=TITULO) as pagina:
         gr.Markdown(f"# {TITULO}")
         with gr.Tabs():
             with gr.Tab("Análise"):
-                with gr.Row():
-                    with gr.Column():
-                        entrada = gr.Image(label="Imagem do pavimento", type="numpy")
-                        detector = gr.Dropdown(DETECTORES_MOCK,
-                                               value=DETECTORES_MOCK[0],
-                                               label="Detector")
-                        analisar = gr.Button("Analisar", variant="primary")
-                    with gr.Column():
-                        saida = gr.Image(label="Patologias encontradas")
-                        tabela = gr.Dataframe(headers=["Patologia", "Confiança"],
-                                              label="Detecções", interactive=False)
-                analisar.click(analisar_mock, inputs=[entrada, detector],
-                               outputs=[saida, tabela])
+                analise.montar(caminho_database, arvore_dnit, modelos_carregados,
+                               problemas_de_carga, cores)
             with gr.Tab("Informações"):
                 informacoes.montar(arvore_dnit)
             with gr.Tab("Configurações"):
                 gr.Markdown("Modelos cadastrados e detectores.")
     return pagina
 
+
 if __name__ == "__main__":
-    montar().launch()
+    argumentos = ler_argumentos()
+    montar(argumentos.database, argumentos.arquivos_de_modelos).launch()
