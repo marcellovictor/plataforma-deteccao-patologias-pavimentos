@@ -88,6 +88,16 @@ def cadastrar_arquivo_de_modelo(caminho_database,
         raise
 
 
+def remover_arquivo_de_modelo(caminho_database, pasta_arquivos_de_modelos, modelo_id):
+    """Apaga a ficha do modelo e depois a cópia do arquivo de modelo."""
+    nome_do_arquivo = None
+    for cadastro_do_modelo in contrato_dados.modelos(caminho_database):
+        if cadastro_do_modelo["id"] == modelo_id:
+            nome_do_arquivo = cadastro_do_modelo["caminho_arquivo_de_modelo"]
+    contrato_dados.remover_modelo(caminho_database, modelo_id)
+    (Path(pasta_arquivos_de_modelos) / nome_do_arquivo).unlink(missing_ok=True)
+
+
 def carregar_modelo(pasta_arquivos_de_modelos,
                     arvore_dnit,
                     cadastro_do_modelo,

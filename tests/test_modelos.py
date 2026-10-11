@@ -163,3 +163,31 @@ def test_detectar_devolve_so_classes_nao_ignoradas_em_ordem(tmp_path):
         assert deteccao["identificador_dnit"] in ("trinca_longitudinal", "panela")
         confiancas.append(deteccao["confianca"])
     assert confiancas == sorted(confiancas, reverse=True)
+
+
+def test_remocao_apaga_a_ficha_e_o_arquivo(tmp_path):
+    caminho_database = contrato_dados.abrir(tmp_path / "teste.db")
+    pasta = tmp_path / "arquivos_de_modelos"
+    modelo_id = modelos.cadastrar_arquivo_de_modelo(caminho_database, pasta, arvore(), modelo_de_teste(tmp_path), "teste", correspondencia_de_teste())
+    modelos.remover_arquivo_de_modelo(caminho_database, pasta, modelo_id)
+    assert contrato_dados.modelos(caminho_database) == []
+    assert not (pasta / "teste.pt").exists()
+
+
+def test_remocao_recusada_deixa_o_arquivo(tmp_path):
+    caminho_database = contrato_dados.abrir(tmp_path / "teste.db")
+    pasta = tmp_path / "arquivos_de_modelos"
+    modelo_id = modelos.cadastrar_arquivo_de_modelo(caminho_database, pasta, arvore(), modelo_de_teste(tmp_path), "teste", correspondencia_de_teste())
+    contrato_dados.criar_detector(caminho_database, "usa o teste", modelo_id, 640, 0.25, 300)
+    with pytest.raises(ValueError, match="usa o teste"):
+        modelos.remover_arquivo_de_modelo(caminho_database, pasta, modelo_id)
+    assert (pasta / "teste.pt").exists()
+
+
+def test_remocao_com_arquivo_ja_apagado_tira_a_ficha(tmp_path):
+    caminho_database = contrato_dados.abrir(tmp_path / "teste.db")
+    pasta = tmp_path / "arquivos_de_modelos"
+    modelo_id = modelos.cadastrar_arquivo_de_modelo(caminho_database, pasta, arvore(), modelo_de_teste(tmp_path), "teste", correspondencia_de_teste())
+    (pasta / "teste.pt").unlink()
+    modelos.remover_arquivo_de_modelo(caminho_database, pasta, modelo_id)
+    assert contrato_dados.modelos(caminho_database) == []
