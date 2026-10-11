@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS modelo (
     id                        INTEGER PRIMARY KEY AUTOINCREMENT,
     nome                      TEXT    NOT NULL UNIQUE,
     caminho_arquivo_de_modelo TEXT    NOT NULL,
-    sha256                    TEXT    NOT NULL
+    sha256                    TEXT    NOT NULL,
+    fixo                      INTEGER NOT NULL DEFAULT 0 CHECK (fixo IN (0, 1))
 ) STRICT;
 
 CREATE TABLE IF NOT EXISTS classe (
@@ -27,7 +28,8 @@ CREATE TABLE IF NOT EXISTS detector (
     modelo_id         INTEGER NOT NULL REFERENCES modelo (id) ON DELETE RESTRICT,
     resolucao_entrada INTEGER NOT NULL,
     limiar_confianca  REAL    NOT NULL,
-    max_deteccoes     INTEGER NOT NULL
+    max_deteccoes     INTEGER NOT NULL,
+    fixo              INTEGER NOT NULL DEFAULT 0 CHECK (fixo IN (0, 1))
 ) STRICT;
 """
 
@@ -57,7 +59,7 @@ def modelos(caminho):
     """Retorna todos os modelos, em ordem de id."""
     with _conexao(caminho) as con:
         linhas = con.execute(
-            "SELECT id, nome, caminho_arquivo_de_modelo, sha256 FROM modelo ORDER BY id")
+            "SELECT id, nome, caminho_arquivo_de_modelo, sha256, fixo FROM modelo ORDER BY id")
         encontrados = []
         for linha in linhas:
             encontrados.append(dict(linha))
@@ -80,6 +82,15 @@ def cadastrar_modelo(caminho, nome, caminho_arquivo_de_modelo, sha256, correspon
     return modelo_id
 
 
+def remover_modelo(caminho, modelo_id):
+    """Apaga o modelo, e as classes dele vão junto."""
+    try:
+        with _conexao(caminho) as con:
+            con.execute("DELETE FROM modelo WHERE id = ?", (modelo_id,))
+    except sqlite3.IntegrityError as e:
+        raise ValueError(f"O modelo de id {modelo_id} está em uso por um detector.") from e
+
+
 def classes(caminho, modelo_id):
     """Classes do modelo, nome -> nó do catálogo, ou None se ignorada."""
     with _conexao(caminho) as con:
@@ -96,7 +107,7 @@ def detectores(caminho):
     """Retorna os detectores, em ordem de id."""
     with _conexao(caminho) as con:
         linhas = con.execute(
-            "SELECT d.id, d.nome, d.modelo_id, m.nome AS modelo_nome, d.resolucao_entrada, d.limiar_confianca, d.max_deteccoes "
+            "SELECT d.id, d.nome, d.modelo_id, m.nome AS modelo_nome, d.resolucao_entrada, d.limiar_confianca, d.max_deteccoes, d.fixo "
             "FROM detector d JOIN modelo m ON m.id = d.modelo_id ORDER BY d.id")
         encontrados = []
         for linha in linhas:
@@ -113,3 +124,9 @@ def criar_detector(caminho, nome, modelo_id, resolucao_entrada, limiar_confianca
                 (nome, modelo_id, resolucao_entrada, float(limiar_confianca), max_deteccoes)).lastrowid
     except sqlite3.IntegrityError as e:
         raise ValueError(f"Não foi possível criar o detector {nome}.") from e
+
+
+def remover_detector(caminho, detector_id):
+    """Apaga o detector."""
+    with _conexao(caminho) as con:
+        con.execute("DELETE FROM detector WHERE id = ?", (detector_id,))

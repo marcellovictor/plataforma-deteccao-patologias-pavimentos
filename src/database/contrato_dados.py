@@ -6,11 +6,11 @@ from patologias import catalogo
 DESTINO_PADRAO = implementacao.CAMINHO_PADRAO
 
 
-def _nome(nome, coisa):
+def _nome(nome, modelo_ou_detector):
     """Recusa nome vazio e devolve o nome sem espaços nas pontas."""
     nome = (nome or "").strip()
     if not nome:
-        raise ValueError(f"Dê um nome ao {coisa}.")
+        raise ValueError(f"Dê um nome ao {modelo_ou_detector}.")
     return nome
 
 def _inteiro(valor):
@@ -21,6 +21,14 @@ def _inteiro(valor):
 def _numero(valor):
     """Checagem se é inteiro ou decimal (e não booleano)"""
     return isinstance(valor, (int, float)) and not isinstance(valor, bool)
+
+
+def _procurar_por_id(lista, identificador):
+    """Item da lista com o id pedido, ou None se não houver."""
+    for item in lista:
+        if item["id"] == identificador:
+            return item
+    return None
 
 
 def abrir(destino=DESTINO_PADRAO):
@@ -47,6 +55,22 @@ def cadastrar_modelo(caminho, arvore_dnit, nome, caminho_arquivo_de_modelo, sha2
     return implementacao.cadastrar_modelo(caminho, nome, caminho_arquivo_de_modelo, sha256, correspondencia)
 
 
+def remover_modelo(caminho, modelo_id):
+    """Apaga o modelo e as classes dele, se existir, não for fixo e nenhum detector o usar."""
+    modelo = _procurar_por_id(implementacao.modelos(caminho), modelo_id)
+    if modelo is None:
+        raise ValueError(f"Não existe modelo de id {modelo_id}.")
+    if modelo["fixo"]:
+        raise ValueError(f"O modelo {modelo['nome']} é fixo e não pode ser removido.")
+    usam = []
+    for detector in implementacao.detectores(caminho):
+        if detector["modelo_id"] == modelo_id:
+            usam.append(detector["nome"])
+    if usam:
+        raise ValueError(f"O modelo {modelo['nome']} não pode ser removido pois é usado pelos detectores {', '.join(usam)}.")
+    implementacao.remover_modelo(caminho, modelo_id)
+
+
 def classes(caminho, modelo_id):
     """Classes do modelo, nome -> nó do catálogo, ou None se ignorada."""
     return implementacao.classes(caminho, modelo_id)
@@ -67,3 +91,13 @@ def criar_detector(caminho, nome, modelo_id, resolucao_entrada, limiar_confianca
     if not _inteiro(max_deteccoes) or max_deteccoes < 1:
         raise ValueError("O máximo de detecções é um número inteiro, a partir de 1.")
     return implementacao.criar_detector(caminho, nome, modelo_id, resolucao_entrada, limiar_confianca, max_deteccoes)
+
+
+def remover_detector(caminho, detector_id):
+    """Apaga o detector, se existir e não for fixo."""
+    detector = _procurar_por_id(implementacao.detectores(caminho), detector_id)
+    if detector is None:
+        raise ValueError(f"Não existe detector de id {detector_id}.")
+    if detector["fixo"]:
+        raise ValueError(f"O detector {detector['nome']} é fixo e não pode ser removido.")
+    implementacao.remover_detector(caminho, detector_id)
