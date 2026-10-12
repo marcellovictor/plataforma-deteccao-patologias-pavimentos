@@ -117,18 +117,29 @@ def carregar_modelo(pasta_arquivos_de_modelos,
                 passo=int(modelo_ultralytics.model.stride.max()))
 
 
+def carregar_modelo_por_id(caminho_database, pasta_arquivos_de_modelos, arvore_dnit, modelo_id):
+    """Confere e carrega o modelo cadastrado com esse id."""
+    for cadastro_do_modelo in contrato_dados.modelos(caminho_database):
+        if cadastro_do_modelo["id"] == modelo_id:
+            correspondencia_classes = contrato_dados.classes(caminho_database, modelo_id)
+            return carregar_modelo(pasta_arquivos_de_modelos,
+                                   arvore_dnit,
+                                   cadastro_do_modelo,
+                                   correspondencia_classes)
+    raise ValueError(f"Não existe modelo cadastrado com id {modelo_id}.")
+
+
 def carregar_modelos_cadastrados(caminho_database, pasta_arquivos_de_modelos, arvore_dnit):
     """Carrega os modelos cadastrados, e devolve os carregados e os problemas, por id."""
     carregados = {}
     problemas = {}
     for cadastro_do_modelo in contrato_dados.modelos(caminho_database):
         modelo_id = cadastro_do_modelo["id"]
-        correspondencia_classes = contrato_dados.classes(caminho_database, modelo_id)
         try:
-            carregados[modelo_id] = carregar_modelo(pasta_arquivos_de_modelos,
-                                                    arvore_dnit,
-                                                    cadastro_do_modelo,
-                                                    correspondencia_classes)
+            carregados[modelo_id] = carregar_modelo_por_id(caminho_database,
+                                                           pasta_arquivos_de_modelos,
+                                                           arvore_dnit,
+                                                           modelo_id)
         except ValueError as erro:
             problemas[modelo_id] = str(erro)
     return carregados, problemas

@@ -191,3 +191,19 @@ def test_remocao_com_arquivo_ja_apagado_tira_a_ficha(tmp_path):
     (pasta / "teste.pt").unlink()
     modelos.remover_arquivo_de_modelo(caminho_database, pasta, modelo_id)
     assert contrato_dados.modelos(caminho_database) == []
+
+
+def test_carga_por_id_devolve_o_modelo_carregado(tmp_path):
+    caminho_database = contrato_dados.abrir(tmp_path / "teste.db")
+    pasta = tmp_path / "arquivos_de_modelos"
+    modelo_id = modelos.cadastrar_arquivo_de_modelo(caminho_database, pasta, arvore(), modelo_de_teste(tmp_path), "teste", correspondencia_de_teste())
+    modelo_carregado = modelos.carregar_modelo_por_id(caminho_database, pasta, arvore(), modelo_id)
+    assert modelo_carregado["traducao_classes"] == {0: "trinca_longitudinal", 1: "panela"}
+    assert modelo_carregado["passo"] == 32
+
+
+def test_carga_por_id_recusa_id_inexistente(tmp_path):
+    caminho_database = contrato_dados.abrir(tmp_path / "teste.db")
+    pasta = tmp_path / "arquivos_de_modelos"
+    with pytest.raises(ValueError, match="Não existe modelo cadastrado com id 99"):
+        modelos.carregar_modelo_por_id(caminho_database, pasta, arvore(), 99)
