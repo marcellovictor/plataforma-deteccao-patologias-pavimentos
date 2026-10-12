@@ -34,6 +34,11 @@ def _procurar_detector(detectores, detector_id):
     return None
 
 
+def _ler_detector(caminho_database, detector_id):
+    """O detector com esse id, lido do database agora, ou None."""
+    return _procurar_detector(contrato_dados.detectores(caminho_database), detector_id)
+
+
 def _descrever_detector(detector):
     """Modelo usado pelo detector e a configuração de inferência dele."""
     if detector is None:
@@ -55,7 +60,7 @@ def _resumir_analise(deteccoes, tempo_ms):
 
 
 def montar(caminho_database, arvore_dnit, modelos_carregados, problemas_de_carga, cores):
-    """Monta a tela de Análise."""
+    """Monta a tela de Análise e devolve a função que relê os detectores, com entradas e saídas."""
     detectores = contrato_dados.detectores(caminho_database)
     opcoes = _opcoes_detectores(detectores)
     inicial = None
@@ -63,12 +68,24 @@ def montar(caminho_database, arvore_dnit, modelos_carregados, problemas_de_carga
         inicial = detectores[0]["id"]
 
     def mostrar_descricao(detector_id):
-        return _descrever_detector(_procurar_detector(detectores, detector_id))
+        return _descrever_detector(_ler_detector(caminho_database, detector_id))
+
+    def atualizar(detector_id):
+        detectores_agora = contrato_dados.detectores(caminho_database)
+        escolhido = _procurar_detector(detectores_agora, detector_id)
+        if escolhido is None and detectores_agora:
+            escolhido = detectores_agora[0]
+        valor = None
+        if escolhido is not None:
+            valor = escolhido["id"]
+        opcoes_agora = _opcoes_detectores(detectores_agora)
+        seletor_novo = gr.update(choices=opcoes_agora, value=valor, interactive=bool(opcoes_agora))
+        return seletor_novo, _descrever_detector(escolhido)
 
     def analisar(caminho_arquivo, detector_id):
         if not caminho_arquivo:
             raise gr.Error("Envie uma imagem antes de analisar.")
-        detector = _procurar_detector(detectores, detector_id)
+        detector = _ler_detector(caminho_database, detector_id)
         if detector is None:
             raise gr.Error(SEM_DETECTOR)
         modelo_id = detector["modelo_id"]
@@ -96,3 +113,4 @@ def montar(caminho_database, arvore_dnit, modelos_carregados, problemas_de_carga
 
     seletor.change(mostrar_descricao, inputs=seletor, outputs=descricao)
     botao.click(analisar, inputs=[entrada, seletor], outputs=[saida, tabela, resumo])
+    return atualizar, [seletor], [seletor, descricao]
