@@ -1,14 +1,19 @@
 """Tela de Análise, a imagem entra e saem as bounding boxes e a tabela."""
 
+import html
+
 import gradio as gr
 import numpy as np
 from PIL import Image, ImageOps
 
 from database import contrato_dados
 from patologias import modelos
-from visual import desenho
+from visual import desenho, estilo
 
 SEM_DETECTOR = "Nenhum detector cadastrado."
+
+ALTURA_DA_ENTRADA = 180
+ALTURA_DO_RESULTADO = "calc(100vh - 144px)"
 
 
 def ler_imagem(caminho_arquivo):
@@ -40,13 +45,19 @@ def _ler_detector(caminho_database, detector_id):
 
 
 def _descrever_detector(detector):
-    """Modelo usado pelo detector e a configuração de inferência dele."""
+    """Ficha do detector, com o modelo usado e a configuração de inferência dele."""
     if detector is None:
-        return SEM_DETECTOR
+        return f'<div class="pav-ficha"><span class="pav-apoio">{SEM_DETECTOR}</span></div>'
     limiar = str(detector["limiar_confianca"]).replace(".", ",")
-    return (f"**Modelo:** {detector['modelo_nome']}  \n"
-            f"entrada {detector['resolucao_entrada']} px · limiar {limiar} · "
-            f"máx. {detector['max_deteccoes']} detecções")
+    textos = [f"entrada {detector['resolucao_entrada']} px",
+              f"limiar {limiar}",
+              f"máx. {detector['max_deteccoes']} detecções"]
+    chips = []
+    for texto in textos:
+        chips.append(f'<span class="pav-chip">{texto}</span>')
+    return (f'<div class="pav-ficha"><span class="pav-rotulo">Modelo</span>'
+            f'<span class="pav-ficha-nome">{html.escape(detector["modelo_nome"])}</span></div>'
+            f'<div class="pav-chips">{"".join(chips)}</div>')
 
 
 def _resumir_analise(deteccoes, tempo_ms):
@@ -56,7 +67,24 @@ def _resumir_analise(deteccoes, tempo_ms):
         texto = "1 detecção"
     else:
         texto = f"{quantidade} detecções"
-    return f"{texto} em {tempo_ms:.0f} ms"
+    return f'<div class="pav-resumo-n">{texto} em {tempo_ms:.0f} ms</div>'
+
+
+def _tabela_de_deteccoes(deteccoes, cores):
+    """Tabela das detecções, cada patologia com a cor da bounding box dela."""
+    cabeca = estilo.linha_titulo("Detecções")
+    if not deteccoes:
+        return (cabeca + '<div class="pav-rolagem pav-vazio">'
+                '<span class="pav-apoio">Nenhuma patologia detectada.</span></div>')
+    linhas = []
+    for deteccao in deteccoes:
+        cor = cores.get(deteccao["identificador_dnit"], desenho.COR_FALLBACK)
+        linhas.append(f'<tr><td><span class="pav-cor" style="background: rgb{cor}"></span>'
+                      f'{html.escape(deteccao["classe"])}</td>'
+                      f'<td class="num">{desenho.porcentagem(deteccao["confianca"])}</td></tr>')
+    return (cabeca + '<div class="pav-rolagem"><table class="pav-tabela"><thead><tr>'
+            '<th>Patologia</th><th class="num">Confiança</th></tr></thead>'
+            f'<tbody>{"".join(linhas)}</tbody></table></div>')
 
 
 def montar(caminho_database, arvore_dnit, modelos_carregados, problemas_de_carga, cores):
@@ -95,22 +123,29 @@ def montar(caminho_database, arvore_dnit, modelos_carregados, problemas_de_carga
             raise gr.Error(f"O modelo {detector['modelo_nome']} não foi carregado ao iniciar a plataforma.")
         imagem = ler_imagem(caminho_arquivo)
         deteccoes, tempo_ms = modelos.detectar(arvore_dnit, modelos_carregados[modelo_id], detector, imagem)
-        linhas = []
-        for deteccao in deteccoes:
-            linhas.append([deteccao["classe"], desenho.porcentagem(deteccao["confianca"])])
-        return (desenho.desenhar(imagem, deteccoes, cores), linhas, _resumir_analise(deteccoes, tempo_ms))
+        return (desenho.desenhar(imagem, deteccoes, cores),
+                _tabela_de_deteccoes(deteccoes, cores),
+                _resumir_analise(deteccoes, tempo_ms))
+
+    def limpar_resultado():
+        """Imagem tirada do campo, apaga também o resultado da análise dela."""
+        return None, "", ""
 
     with gr.Row():
-        with gr.Column():
-            entrada = gr.Image(label="Imagem do pavimento", type="filepath", image_mode=None)
-            seletor = gr.Dropdown(opcoes, value=inicial, label="Detector", interactive=bool(opcoes))
-            descricao = gr.Markdown(_descrever_detector(_procurar_detector(detectores, inicial)))
-            botao = gr.Button("Analisar", variant="primary")
-        with gr.Column():
-            saida = gr.Image(label="Patologias encontradas")
-            resumo = gr.Markdown()
-            tabela = gr.Dataframe(headers=["Patologia", "Confiança"], label="Detecções", interactive=False)
+        with gr.Column(scale=1, min_width=360):
+            entrada = gr.Image(show_label=False, type="filepath", image_mode=None,
+                               sources=["upload"], height=ALTURA_DA_ENTRADA)
+            seletor = gr.Dropdown(opcoes, value=inicial, label="Detector", filterable=False,
+                                  interactive=bool(opcoes))
+            descricao = estilo.bloco(_descrever_detector(_procurar_detector(detectores, inicial)))
+            botao = gr.Button("Analisar", variant="primary", elem_classes="pav-analisar")
+            resumo = estilo.bloco("")
+            tabela = estilo.bloco("")
+        with gr.Column(scale=2, min_width=420):
+            saida = gr.Image(show_label=False, height=ALTURA_DO_RESULTADO,
+                             buttons=["download", "fullscreen"])
 
     seletor.change(mostrar_descricao, inputs=seletor, outputs=descricao)
     botao.click(analisar, inputs=[entrada, seletor], outputs=[saida, tabela, resumo])
+    entrada.clear(limpar_resultado, outputs=[saida, tabela, resumo])
     return atualizar, [seletor], [seletor, descricao]

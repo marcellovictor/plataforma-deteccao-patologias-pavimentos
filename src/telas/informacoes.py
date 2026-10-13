@@ -2,7 +2,11 @@
 
 from html import escape
 
-import gradio as gr
+from visual import estilo
+
+# Largura em pixels das colunas da hierarquia, da esquerda para a direita.
+# A última coluna da hierarquia não entra aqui, fica com o que sobrar.
+LARGURAS = (148, 118, 124)
 
 
 def _folhas(arvore_dnit, identificador):
@@ -30,7 +34,8 @@ def _niveis(arvore_dnit, identificador):
 def _texto(no):
     """Nome do nó, com a descrição embaixo quando ela existe."""
     if no["descricao"]:
-        return escape(no["nome"]) + "<br><small>" + escape(no["descricao"]) + "</small>"
+        return (escape(no["nome"])
+                + f'<div class="pav-norma-descricao">{escape(no["descricao"])}</div>')
     return escape(no["nome"])
 
 
@@ -40,7 +45,7 @@ def _linhas(arvore_dnit, identificador, nivel, colunas, antes, linhas):
     if no["filhos"]:
         span = _folhas(arvore_dnit, identificador)
         rowspan = f' rowspan="{span}"' if span > 1 else ""
-        celula = f"<td{rowspan}>{_texto(no)}</td>"
+        celula = f'<td{rowspan} class="grupo">{_texto(no)}</td>'
         primeiro = True
         for filho in no["filhos"]:
             _linhas(arvore_dnit, filho, nivel + 1, colunas,
@@ -50,7 +55,17 @@ def _linhas(arvore_dnit, identificador, nivel, colunas, antes, linhas):
     resto = colunas - nivel + 1
     colspan = f' colspan="{resto}"' if resto > 1 else ""
     linhas.append(f"<tr>{antes}<td{colspan}>{_texto(no)}</td>"
-                  f"<td>{escape(no['codigo'] or '')}</td></tr>")
+                  f'<td class="cod">{escape(no["codigo"] or "")}</td></tr>')
+
+
+def _larguras_das_colunas(colunas):
+    """Marcação das larguras, fixas na hierarquia e na codificação, livre na última da hierarquia."""
+    partes = []
+    for indice in range(colunas - 1):
+        largura = LARGURAS[min(indice, len(LARGURAS) - 1)]
+        partes.append(f'<col style="width: {largura}px">')
+    partes.append('<col><col class="cod">')
+    return f'<colgroup>{"".join(partes)}</colgroup>'
 
 
 def _tabela(arvore_dnit, raiz):
@@ -60,10 +75,10 @@ def _tabela(arvore_dnit, raiz):
     for filho in arvore_dnit["patologias"][raiz]["filhos"]:
         _linhas(arvore_dnit, filho, 1, colunas, "", linhas)
     titulo = escape(arvore_dnit["patologias"][raiz]["nome"])
-    return (f'<table border="1" cellpadding="4">'
+    return (f'<table class="pav-norma">{_larguras_das_colunas(colunas)}'
             f'<thead><tr><th colspan="{colunas}">{titulo}</th>'
             f"<th>Codificação</th></tr></thead>"
-            f'<tbody>{"".join(linhas)}</tbody></table><br>')
+            f'<tbody>{"".join(linhas)}</tbody></table>')
 
 
 def quadro(arvore_dnit):
@@ -72,13 +87,13 @@ def quadro(arvore_dnit):
     for raiz in arvore_dnit["raizes"]:
         tabelas.append(_tabela(arvore_dnit, raiz))
     return ("".join(tabelas)
-            + f'<p><small>Fonte: {escape(arvore_dnit["fonte"])}. As colunas de classe das '
-              "fendas (FC-1 a FC-3) ficam de fora: dependem de medir a abertura da trinca em "
-              "milímetros, o que não se obtém de bounding box.</small></p>")
+            + f'<p class="pav-apoio pav-norma-fonte">Fonte: {escape(arvore_dnit["fonte"])}. '
+              "As colunas de classe das fendas (FC-1 a FC-3) ficam de fora: dependem de medir "
+              "a abertura da trinca em milímetros, o que não se obtém de bounding box.</p>")
 
 
 def montar(arvore_dnit):
     """Monta a tela de Informações."""
-    gr.Markdown("## Guia de patologias da norma")
-    gr.Markdown("Quadro resumo das patologias e da codificação, conforme a norma.")
-    gr.HTML(quadro(arvore_dnit))
+    estilo.bloco('<h2 class="pav-secao-titulo">Guia de patologias da norma</h2>'
+                 '<p class="pav-secao-texto pav-norma-intro">Quadro resumo das patologias e da '
+                 'codificação, conforme a norma.</p>' + quadro(arvore_dnit))
