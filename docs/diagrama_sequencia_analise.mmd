@@ -1,0 +1,36 @@
+sequenceDiagram
+    autonumber
+    actor U as Usuário
+    participant A as telas/analise.py
+    participant C as database/contrato_dados.py
+    participant S as database/sqlite.py
+    participant M as patologias/modelos.py
+    participant K as patologias/catalogo.py
+    participant D as visual/desenho.py
+
+    U->>A: envia a imagem, escolhe o detector e aciona Analisar
+    alt nenhuma imagem enviada
+        A-->>U: mensagem "Envie uma imagem antes de analisar."
+    end
+    A->>C: detectores(caminho_database)
+    C->>S: detectores(caminho)
+    S-->>C: detectores, com nome do modelo, resolução, limiar e máximo
+    C-->>A: detectores
+    A->>A: procura o detector escolhido pelo id
+    alt detector inexistente, ou modelo que não carregou
+        A-->>U: mensagem com o motivo, nada é analisado
+    end
+    A->>A: ler_imagem: abre o arquivo, aplica a orientação EXIF, converte para RGB
+    A->>M: detectar(arvore_dnit, modelo_carregado, detector, imagem)
+    M->>M: converte RGB para BGR e roda o modelo com a configuração de inferência, só nas classes não ignoradas
+    loop cada bounding box encontrada
+        M->>K: rotulo(arvore_dnit, identificador_dnit)
+        K-->>M: nome de exibição da patologia
+    end
+    M->>M: ordena as detecções pela confiança
+    M-->>A: detecções e tempo em milissegundos
+    A->>D: desenhar(imagem, deteccoes, cores)
+    D-->>A: imagem com as bounding boxes
+    A->>A: monta a tabela de detecções e o resumo
+    A-->>U: imagem anotada, tabela de detecções e tempo de detecção
+    Note over A,S: nada é gravado no database

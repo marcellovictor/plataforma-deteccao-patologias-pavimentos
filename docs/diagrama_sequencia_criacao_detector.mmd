@@ -1,0 +1,40 @@
+sequenceDiagram
+    autonumber
+    actor U as Usuário
+    participant T as telas/configuracoes.py
+    participant M as patologias/modelos.py
+    participant C as database/contrato_dados.py
+    participant S as database/sqlite.py
+
+    U->>T: dá o nome, escolhe um modelo carregado, digita entrada, limiar e máximo, e aciona Criar detector
+    T->>T: confere que há modelo escolhido e converte os campos em número, aceitando vírgula no limiar
+    alt sem modelo, ou campo que não é número
+        T-->>U: mensagem na tela, nada é gravado
+    end
+    T->>M: criar_detector(caminho_database, modelo_carregado, nome, modelo_id, resolucao, limiar, maximo)
+    M->>M: confere que a resolução é múltiplo do passo do modelo
+    alt resolução fora do passo
+        M-->>T: recusa
+        T-->>U: mensagem na tela, nada é gravado
+    end
+    M->>C: criar_detector(caminho, nome, modelo_id, resolucao, limiar, maximo)
+    C->>C: confere nome não vazio, resolução e máximo inteiros acima de zero, limiar entre 0 e 1
+    alt algum valor fora da faixa
+        C-->>M: recusa
+        M-->>T: recusa
+        T-->>U: mensagem na tela, nada é gravado
+    end
+    C->>S: criar_detector(caminho, nome, modelo_id, resolucao, limiar, maximo)
+    alt nome repetido ou modelo inexistente
+        S-->>C: recusa traduzida em mensagem
+        C-->>M: recusa
+        M-->>T: recusa
+        T-->>U: mensagem na tela, os campos continuam preenchidos
+    else database aceitou
+        S-->>C: id do detector
+        C-->>M: id do detector
+        M-->>T: id do detector
+        T->>T: limpa o formulário e relê as listas de modelos e detectores
+        T-->>U: "Detector criado", que aparece no seletor ao voltar para a Análise
+    end
+    Note over T,S: enquanto um detector usar um modelo, a remoção desse modelo é recusada

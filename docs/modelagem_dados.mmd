@@ -1,0 +1,34 @@
+erDiagram
+    modelo ||--o{ classe : "tem, ON DELETE CASCADE"
+    modelo ||--o{ detector : "usado por, ON DELETE RESTRICT"
+    no_do_catalogo |o..o{ classe : "patologia_dnit, conferido no código"
+
+    modelo {
+        INTEGER id PK "autoincrement, nunca reaproveitado"
+        TEXT nome UK "não vazio"
+        TEXT caminho_arquivo_de_modelo "nome do arquivo na pasta dos arquivos de modelos"
+        TEXT sha256 "impressão digital do arquivo"
+        INTEGER fixo "0 ou 1, padrão 0"
+    }
+    classe {
+        INTEGER modelo_id PK, FK "referencia modelo.id"
+        TEXT nome PK "como está gravado no arquivo de modelo"
+        TEXT patologia_dnit "id do nó do catálogo, vazio = ignorada"
+    }
+    detector {
+        INTEGER id PK "autoincrement, nunca reaproveitado"
+        TEXT nome UK "não vazio"
+        INTEGER modelo_id FK "referencia modelo.id"
+        INTEGER resolucao_entrada "acima de 0, múltiplo do passo do modelo"
+        REAL limiar_confianca "entre 0 e 1"
+        INTEGER max_deteccoes "a partir de 1"
+        INTEGER fixo "0 ou 1, padrão 0"
+    }
+    no_do_catalogo["nó do catálogo da norma (YAML, fora do database)"] {
+        texto id "identificador do nó"
+        texto nome "transcrição literal da norma"
+        texto nome_exibicao "vazio quando o nó não tem"
+        texto descricao "texto explicativo da norma, quando houver"
+        texto codigo "só nas folhas"
+        lista filhos "nós imediatamente abaixo na hierarquia da norma"
+    }

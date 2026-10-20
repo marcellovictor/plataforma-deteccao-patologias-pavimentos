@@ -1,0 +1,54 @@
+sequenceDiagram
+    autonumber
+    actor U as Usuário
+    participant T as telas/configuracoes.py
+    participant M as patologias/modelos.py
+    participant K as patologias/catalogo.py
+    participant C as database/contrato_dados.py
+    participant S as database/sqlite.py
+
+    Note over U,T: o formulário de cadastro só existe com a opção --gerenciar-modelos
+    U->>T: envia o arquivo de modelo (.pt)
+    T->>M: abrir_modelo(caminho_arquivo) e ler_classes(...)
+    alt arquivo não abre
+        M-->>T: recusa
+        T-->>U: mensagem na tela, nada é gravado
+    else arquivo aberto
+        M-->>T: classes gravadas no arquivo
+        T-->>U: um seletor por classe, com Ignorar e as patologias do catálogo
+    end
+    U->>T: liga cada classe a uma patologia, ou a Ignorar, dá o nome e aciona Salvar modelo
+    alt alguma classe sem escolha
+        T-->>U: mensagem na tela, nada é gravado
+    end
+    T->>M: cadastrar_arquivo_de_modelo(caminho_database, pasta, arvore_dnit, arquivo, nome, correspondencia)
+    M->>M: abre o arquivo de novo e confere as classes contra a correspondência
+    M->>K: existe(arvore_dnit, identificador_dnit), para cada patologia escolhida
+    K-->>M: resposta
+    M->>M: confere o nome do arquivo e copia o .pt para a pasta dos arquivos de modelos
+    M->>C: cadastrar_modelo(caminho, arvore_dnit, nome, nome_do_arquivo, sha256, correspondencia)
+    C->>C: confere nome não vazio e correspondência preenchida
+    C->>K: existe(arvore_dnit, identificador_dnit), para cada patologia escolhida
+    K-->>C: resposta
+    C->>S: cadastrar_modelo(caminho, nome, nome_do_arquivo, sha256, correspondencia)
+    S->>S: grava o modelo e todas as classes na mesma transação
+    alt nome repetido ou outra recusa
+        S-->>C: recusa traduzida em mensagem
+        C-->>M: recusa
+        M->>M: apaga a cópia do .pt
+        M-->>T: recusa
+        T-->>U: mensagem na tela, nada é gravado
+    else database aceitou
+        S-->>C: id do modelo
+        C-->>M: id do modelo
+        M-->>T: id do modelo
+        T->>M: carregar_modelo_por_id(caminho_database, pasta, arvore_dnit, id)
+        M->>M: confere o arquivo, o SHA-256 e as classes, e abre o modelo
+        alt modelo carregou
+            M-->>T: modelo carregado, que a tela guarda entre os modelos carregados
+            T-->>U: "Modelo cadastrado", já disponível para criar detectores
+        else modelo não carregou
+            M-->>T: motivo, que a tela guarda entre os problemas de carga
+            T-->>U: "Modelo cadastrado, mas não carregou", com o motivo
+        end
+    end
